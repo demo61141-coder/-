@@ -5,7 +5,6 @@ object MotionBridgeInjector {
     fun inject(rawHtml: String): String {
         var modified = rawHtml
 
-        // Expose SCENES and TOTAL_DURATION if declared inside an IIFE so edits apply live
         modified = modified.replace(
             Regex("""\b(?:const|let|var)\s+SCENES\s*="""),
             "var SCENES = window.__MC_SCENES ="
@@ -89,17 +88,29 @@ object MotionBridgeInjector {
   const origRect = proto.rect;
   const origRoundRect = proto.roundRect;
   const origArc = proto.arc;
+  const origArcTo = proto.arcTo;
+  const origQuadraticCurveTo = proto.quadraticCurveTo;
+  const origBezierCurveTo = proto.bezierCurveTo;
   const origEllipse = proto.ellipse;
 
   let saveStack = [];
   let gfxSeq = 0;
+  let shapeSeq = 0;
   let imgSeq = 0;
   let activeSceneTag = 's0';
   let pathBounds = null;
+  let activeShapeKey = null;
+  let activeShapeOv = null;
+  let activePathDx = 0;
+  let activePathDy = 0;
   let groupRegistry = {};
 
-  function resetPathBounds() {
+  function resetPathState() {
     pathBounds = null;
+    activeShapeKey = null;
+    activeShapeOv = null;
+    activePathDx = 0;
+    activePathDy = 0;
   }
 
   function expandPathPoint(x, y) {
@@ -122,9 +133,20 @@ object MotionBridgeInjector {
     return false;
   }
 
-  function currentGroupKey() {
+  function currentComponentGroupKey() {
+    // Prefer depth >= 2 component groups (e.g. drawPerson, drawDocument, Clock, cards inside stage)
+    // Or depth == 1 if it is NOT a large scene backdrop container
     for (let i = saveStack.length - 1; i >= 0; i--) {
-      if (saveStack[i].groupKey) return saveStack[i].groupKey;
+      const fr = saveStack[i];
+      if (fr.groupKey) {
+        if (fr.depth >= 2) return fr.groupKey;
+        const reg = groupRegistry[fr.groupKey];
+        if (reg && (reg.maxY - reg.minY) > (reg.ch * 0.28) && (reg.maxX - reg.minX) > (reg.cw * 0.65)) {
+          // Large stage container: let child shapes inside it have their own individual shapeKey!
+          return null;
+        }
+        return fr.groupKey;
+      }
     }
     return null;
   }
@@ -149,8 +171,7 @@ object MotionBridgeInjector {
       const bw = maxX - minX;
       const bh = maxY - minY;
 
-      // Ignore full-canvas background or tiny 1-2px lines
-      if (bw < 24 || bh < 24) return;
+      if (bw < 22 || bh < 18) return;
       if (bw > cw * 0.88 && bh > ch * 0.88) return;
 
       const existing = groupRegistry[key];
@@ -234,39 +255,87 @@ object MotionBridgeInjector {
   };
 
   proto.beginPath = function() {
-    resetPathBounds();
+    resetPathState();
     origBeginPath.call(this);
+    const compKey = currentComponentGroupKey();
+    if (!compKey) {
+      shapeSeq++;
+      activeShapeKey = 'shape_' + activeSceneTag + '_' + shapeSeq;
+      const ov = window.__mcElementOverrides[activeShapeKey];
+      if (ov) {
+        activeShapeOv = ov;
+        if (!ov.deleted && (ov.offsetXNorm || ov.offsetYNorm)) {
+          const cw = (this.canvas && this.canvas.width) ? this.canvas.width : 1080;
+          const ch = (this.canvas && this.canvas.height) ? this.canvas.height : 1920;
+          const m = this.getTransform();
+          const sx = Math.hypot(m.a, m.b) || 1;
+          const sy = Math.hypot(m.c, m.d) || 1;
+          activePathDx = ((ov.offsetXNorm || 0) * cw) / sx;
+          activePathDy = ((ov.offsetYNorm || 0) * ch) / sy;
+        }
+      }
+    }
   };
+
   proto.moveTo = function(x, y) {
-    expandPathPoint(x, y);
-    origMoveTo.call(this, x, y);
+    const px = x + activePathDx, py = y + activePathDy;
+    expandPathPoint(px, py);
+    origMoveTo.call(this, px, py);
   };
   proto.lineTo = function(x, y) {
-    expandPathPoint(x, y);
-    origLineTo.call(this, x, y);
+    const px = x + activePathDx, py = y + activePathDy;
+    expandPathPoint(px, py);
+    origLineTo.call(this, px, py);
   };
   proto.rect = function(x, y, w, h) {
-    expandPathPoint(x, y);
-    expandPathPoint(x + w, y + h);
-    origRect.call(this, x, y, w, h);
+    const px = x + activePathDx, py = y + activePathDy;
+    expandPathPoint(px, py);
+    expandPathPoint(px + w, py + h);
+    origRect.call(this, px, py, w, h);
   };
   if (origRoundRect) {
     proto.roundRect = function(x, y, w, h, r) {
-      expandPathPoint(x, y);
-      expandPathPoint(x + w, y + h);
-      origRoundRect.call(this, x, y, w, h, r);
+      const px = x + activePathDx, py = y + activePathDy;
+      expandPathPoint(px, py);
+      expandPathPoint(px + w, py + h);
+      origRoundRect.call(this, px, py, w, h, r);
     };
   }
   proto.arc = function(x, y, r, s, e, ccw) {
-    expandPathPoint(x - r, y - r);
-    expandPathPoint(x + r, y + r);
-    origArc.call(this, x, y, r, s, e, ccw);
+    const px = x + activePathDx, py = y + activePathDy;
+    expandPathPoint(px - r, py - r);
+    expandPathPoint(px + r, py + r);
+    origArc.call(this, px, py, r, s, e, ccw);
+  };
+  proto.arcTo = function(x1, y1, x2, y2, r) {
+    const px1 = x1 + activePathDx, py1 = y1 + activePathDy;
+    const px2 = x2 + activePathDx, py2 = y2 + activePathDy;
+    expandPathPoint(px1, py1);
+    expandPathPoint(px2, py2);
+    origArcTo.call(this, px1, py1, px2, py2, r);
+  };
+  proto.quadraticCurveTo = function(cpx, cpy, x, y) {
+    const pcx = cpx + activePathDx, pcy = cpy + activePathDy;
+    const px = x + activePathDx, py = y + activePathDy;
+    expandPathPoint(pcx, pcy);
+    expandPathPoint(px, py);
+    origQuadraticCurveTo.call(this, pcx, pcy, px, py);
+  };
+  proto.bezierCurveTo = function(cp1x, cp1y, cp2x, cp2y, x, y) {
+    const p1x = cp1x + activePathDx, p1y = cp1y + activePathDy;
+    const p2x = cp2x + activePathDx, p2y = cp2y + activePathDy;
+    const px = x + activePathDx, py = y + activePathDy;
+    expandPathPoint(p1x, p1y);
+    expandPathPoint(p2x, p2y);
+    expandPathPoint(px, py);
+    origBezierCurveTo.call(this, p1x, p1y, p2x, p2y, px, py);
   };
   if (origEllipse) {
     proto.ellipse = function(x, y, rx, ry, rot, s, e, ccw) {
-      expandPathPoint(x - rx, y - ry);
-      expandPathPoint(x + rx, y + ry);
-      origEllipse.call(this, x, y, rx, ry, rot, s, e, ccw);
+      const px = x + activePathDx, py = y + activePathDy;
+      expandPathPoint(px - rx, py - ry);
+      expandPathPoint(px + rx, py + ry);
+      origEllipse.call(this, px, py, rx, ry, rot, s, e, ccw);
     };
   }
 
@@ -275,13 +344,13 @@ object MotionBridgeInjector {
     const cw = (this.canvas && this.canvas.width) ? this.canvas.width : 1080;
     const ch = (this.canvas && this.canvas.height) ? this.canvas.height : 1920;
     const isBg = (Math.abs(w) > cw * 0.85 && Math.abs(h) > ch * 0.85);
-    const gKey = currentGroupKey();
+    const compKey = currentComponentGroupKey();
 
     if (!isBg) {
-      const key = gKey || ('gfx_' + activeSceneTag + '_r' + (++gfxSeq));
-      const ov = gKey ? null : window.__mcElementOverrides[key];
+      const key = compKey || ('rect_' + activeSceneTag + '_' + (++shapeSeq));
+      const ov = compKey ? null : window.__mcElementOverrides[key];
       if (ov && ov.deleted) return;
-      recordGraphicBox(this, key, 'GRAPHIC', 'Graphic #' + gfxSeq, x, y, x + w, y + h);
+      recordGraphicBox(this, key, 'GRAPHIC', 'Box #' + shapeSeq, x, y, x + w, y + h);
       if (ov) {
         origSave.call(this);
         applyGroupOverrideTransform(this, ov, cw, ch);
@@ -297,11 +366,11 @@ object MotionBridgeInjector {
     if (isSkippedByGroup()) return;
     const cw = (this.canvas && this.canvas.width) ? this.canvas.width : 1080;
     const ch = (this.canvas && this.canvas.height) ? this.canvas.height : 1920;
-    const gKey = currentGroupKey();
-    const key = gKey || ('gfx_' + activeSceneTag + '_sr' + (++gfxSeq));
-    const ov = gKey ? null : window.__mcElementOverrides[key];
+    const compKey = currentComponentGroupKey();
+    const key = compKey || ('srect_' + activeSceneTag + '_' + (++shapeSeq));
+    const ov = compKey ? null : window.__mcElementOverrides[key];
     if (ov && ov.deleted) return;
-    recordGraphicBox(this, key, 'GRAPHIC', 'Frame #' + gfxSeq, x, y, x + w, y + h);
+    recordGraphicBox(this, key, 'GRAPHIC', 'Frame #' + shapeSeq, x, y, x + w, y + h);
     if (ov) {
       origSave.call(this);
       applyGroupOverrideTransform(this, ov, cw, ch);
@@ -314,59 +383,63 @@ object MotionBridgeInjector {
 
   proto.fill = function() {
     if (isSkippedByGroup()) return;
-    const gKey = currentGroupKey();
-    if (gKey && pathBounds) {
+    if (activeShapeOv && activeShapeOv.deleted) return;
+    const compKey = currentComponentGroupKey();
+    if (compKey && pathBounds) {
       recordGraphicBox(
-        this, gKey, 'GRAPHIC', 'Illustration (' + gKey + ')',
+        this, compKey, 'GRAPHIC', 'Graphic (' + compKey + ')',
         pathBounds.minX, pathBounds.minY, pathBounds.maxX, pathBounds.maxY
       );
-    } else if (!gKey && pathBounds) {
-      const bw = pathBounds.maxX - pathBounds.minX;
-      const bh = pathBounds.maxY - pathBounds.minY;
-      if (bw >= 32 && bh >= 32) {
-        const key = 'gfx_' + activeSceneTag + '_p' + (++gfxSeq);
-        const ov = window.__mcElementOverrides[key];
-        if (ov && ov.deleted) return;
-        recordGraphicBox(
-          this, key, 'GRAPHIC', 'Shape #' + gfxSeq,
-          pathBounds.minX, pathBounds.minY, pathBounds.maxX, pathBounds.maxY
-        );
-        if (ov) {
-          const cw = (this.canvas && this.canvas.width) ? this.canvas.width : 1080;
-          const ch = (this.canvas && this.canvas.height) ? this.canvas.height : 1920;
-          origSave.call(this);
-          applyGroupOverrideTransform(this, ov, cw, ch);
-          origFill.apply(this, arguments);
-          origRestore.call(this);
-          return;
-        }
-      }
+    } else if (activeShapeKey && pathBounds) {
+      recordGraphicBox(
+        this, activeShapeKey, 'GRAPHIC', 'Card / Shape #' + shapeSeq,
+        pathBounds.minX, pathBounds.minY, pathBounds.maxX, pathBounds.maxY
+      );
+    }
+    if (activeShapeOv && activeShapeOv.colorHex) {
+      origSave.call(this);
+      this.fillStyle = activeShapeOv.colorHex;
+      origFill.apply(this, arguments);
+      origRestore.call(this);
+      return;
     }
     origFill.apply(this, arguments);
   };
 
   proto.stroke = function() {
     if (isSkippedByGroup()) return;
-    const gKey = currentGroupKey();
-    if (gKey && pathBounds) {
+    if (activeShapeOv && activeShapeOv.deleted) return;
+    const compKey = currentComponentGroupKey();
+    if (compKey && pathBounds) {
       recordGraphicBox(
-        this, gKey, 'GRAPHIC', 'Illustration (' + gKey + ')',
+        this, compKey, 'GRAPHIC', 'Graphic (' + compKey + ')',
         pathBounds.minX, pathBounds.minY, pathBounds.maxX, pathBounds.maxY
       );
+    } else if (activeShapeKey && pathBounds) {
+      recordGraphicBox(
+        this, activeShapeKey, 'GRAPHIC', 'Card / Shape #' + shapeSeq,
+        pathBounds.minX, pathBounds.minY, pathBounds.maxX, pathBounds.maxY
+      );
+    }
+    if (activeShapeOv && activeShapeOv.colorHex) {
+      origSave.call(this);
+      this.strokeStyle = activeShapeOv.colorHex;
+      origStroke.apply(this, arguments);
+      origRestore.call(this);
+      return;
     }
     origStroke.apply(this, arguments);
   };
 
   proto.drawImage = function(img) {
     if (isSkippedByGroup()) return;
-    // Skip internal export canvas capture calls
     if (this.canvas === window.__mcExportCanvas) {
       origDrawImage.apply(this, arguments);
       return;
     }
-    const gKey = currentGroupKey();
-    const key = gKey || ('img_' + activeSceneTag + '_' + (++imgSeq));
-    const ov = gKey ? null : window.__mcElementOverrides[key];
+    const compKey = currentComponentGroupKey();
+    const key = compKey || ('img_' + activeSceneTag + '_' + (++imgSeq));
+    const ov = compKey ? null : window.__mcElementOverrides[key];
     if (ov && ov.deleted) return;
 
     let dx = 0, dy = 0, dw = 100, dh = 100;
@@ -485,9 +558,10 @@ object MotionBridgeInjector {
     window.__mcFrameElements = [];
     saveStack = [];
     gfxSeq = 0;
+    shapeSeq = 0;
     imgSeq = 0;
     groupRegistry = {};
-    resetPathBounds();
+    resetPathState();
 
     let activeDeleted = false;
     activeSceneTag = 's0';
@@ -540,15 +614,14 @@ object MotionBridgeInjector {
 
     if (window.__mcExportMode) return '';
 
-    // Append tracked graphic & image groups to detected elements
     Object.keys(groupRegistry).forEach(k => {
       const g = groupRegistry[k];
       const w = g.maxX - g.minX;
       const h = g.maxY - g.minY;
-      if (w >= 24 && h >= 24 && !(w > g.cw * 0.88 && h > g.ch * 0.88)) {
+      if (w >= 22 && h >= 18 && !(w > g.cw * 0.88 && h > g.ch * 0.88)) {
         const label = g.kind === 'IMAGE'
           ? ('Picture (' + Math.round(w) + '×' + Math.round(h) + ')')
-          : ('Graphic (' + Math.round(w) + '×' + Math.round(h) + ')');
+          : ('Card / Graphic (' + Math.round(w) + '×' + Math.round(h) + ')');
         window.__mcFrameElements.push({
           key: g.key,
           kind: g.kind,
@@ -557,7 +630,7 @@ object MotionBridgeInjector {
           xNorm: Math.max(0, Math.min(1, g.minX / g.cw)),
           yNorm: Math.max(0, Math.min(1, g.minY / g.ch)),
           wNorm: Math.max(0.04, Math.min(1, w / g.cw)),
-          hNorm: Math.max(0.03, Math.min(1, h / g.ch))
+          hNorm: Math.max(0.025, Math.min(1, h / g.ch))
         });
       }
     });
@@ -622,6 +695,7 @@ object MotionBridgeInjector {
       ec.height = targetH;
     }
     const ex = ec.getContext('2d', { alpha: false });
+    ex.fillStyle = '#070b12';
     origFillRect.call(ex, 0, 0, targetW, targetH);
     origDrawImage.call(ex, c, 0, 0, targetW, targetH);
     return ec.toDataURL('image/jpeg', quality || 0.80);

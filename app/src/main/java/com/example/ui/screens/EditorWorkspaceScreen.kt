@@ -39,7 +39,9 @@ import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FastForward
@@ -89,6 +91,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.model.ActiveSheet
+import com.example.model.HtmlElementKind
 import com.example.model.OverlayType
 import com.example.ui.components.AddGraphicSheet
 import com.example.ui.components.EditSceneSheet
@@ -196,6 +199,17 @@ fun EditorWorkspaceScreen(
             }
 
             IconButton(
+                onClick = { viewModel.toggleTapGuides() },
+                modifier = Modifier.testTag("toggle_tap_guides_button")
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.CropFree,
+                    contentDescription = "Show Tap Boxes",
+                    tint = if (uiState.showTapGuides) AmberCut else TextSecondary
+                )
+            }
+
+            IconButton(
                 onClick = { viewModel.toggleMute() },
                 modifier = Modifier.testTag("mute_toggle_button")
             ) {
@@ -243,24 +257,9 @@ fun EditorWorkspaceScreen(
                     .border(1.5.dp, StudioBorder, RoundedCornerShape(16.dp))
                     .background(Color(0xFF070B12))
                     .onSizeChanged { stageSize = it }
-                    .pointerInput(uiState.selectedOverlayId, uiState.selectedHtmlElementKey) {
-                        detectTapGestures { offset ->
-                            val w = stageSize.width.coerceAtLeast(1).toFloat()
-                            val h = stageSize.height.coerceAtLeast(1).toFloat()
-                            viewModel.handlePreviewTap(offset.x / w, offset.y / h)
-                        }
-                    }
-                    .pointerInput(uiState.selectedOverlayId, uiState.selectedHtmlElementKey) {
-                        detectDragGestures { change, dragAmount ->
-                            change.consume()
-                            val w = stageSize.width.coerceAtLeast(1).toFloat()
-                            val h = stageSize.height.coerceAtLeast(1).toFloat()
-                            viewModel.moveSelectedElementBy(dragAmount.x / w, dragAmount.y / h)
-                        }
-                    }
                     .testTag("preview_stage")
             ) {
-                // HTML Motion WebView Layer
+                // 1. HTML Motion WebView Layer
                 AndroidView(
                     factory = {
                         viewModel.webController.getOrCreateWebView {
@@ -270,9 +269,8 @@ fun EditorWorkspaceScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // User Overlays + HTML Selection Highlight Layer
+                // 2. User Overlays + HTML Selection & Tap-Guide Highlight Layer
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    // Draw user-added overlays (Text / Photo / Video / Graphics)
                     drawIntoCanvas { canvas ->
                         viewModel.overlayRenderer.renderOverlays(
                             canvas = canvas.nativeCanvas,
@@ -283,6 +281,30 @@ fun EditorWorkspaceScreen(
                             selectedOverlayId = uiState.selectedOverlayId,
                             drawSelectionChrome = true
                         )
+                    }
+
+                    // Optional Tap Guides showing every editable card/picture/text
+                    if (uiState.showTapGuides) {
+                        uiState.detectedHtmlElements.forEach { el ->
+                            val ov = uiState.htmlElementOverrides[el.key]
+                            if (ov?.isDeleted != true) {
+                                val dx = (ov?.offsetXNorm ?: 0f) * size.width
+                                val dy = (ov?.offsetYNorm ?: 0f) * size.height
+                                val left = (el.xNorm * size.width + dx).coerceIn(0f, size.width)
+                                val top = (el.yNorm * size.height + dy).coerceIn(0f, size.height)
+                                val w = (el.wNorm * size.width).coerceAtLeast(24f)
+                                val h = (el.hNorm * size.height).coerceAtLeast(18f)
+                                drawRect(
+                                    color = if (el.kind == HtmlElementKind.TEXT) CyanPulse.copy(alpha = 0.55f) else AmberCut.copy(alpha = 0.45f),
+                                    topLeft = Offset(left, top),
+                                    size = Size(w, h),
+                                    style = Stroke(
+                                        width = 2f,
+                                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f), 0f)
+                                    )
+                                )
+                            }
+                        }
                     }
 
                     // Draw selection box if an HTML element is selected
@@ -302,13 +324,41 @@ fun EditorWorkspaceScreen(
                                 topLeft = Offset(left, top),
                                 size = Size(w, h),
                                 style = Stroke(
-                                    width = 4f,
+                                    width = 4.5f,
                                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f), 0f)
                                 )
                             )
                         }
                     }
                 }
+
+                // 3. Dedicated Topmost Compose Touch Layer (intercepts taps/drags above WebView!)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = { offset ->
+                                    val w = stageSize.width.coerceAtLeast(1).toFloat()
+                                    val h = stageSize.height.coerceAtLeast(1).toFloat()
+                                    viewModel.handlePreviewTap(offset.x / w, offset.y / h)
+                                },
+                                onDoubleTap = { offset ->
+                                    val w = stageSize.width.coerceAtLeast(1).toFloat()
+                                    val h = stageSize.height.coerceAtLeast(1).toFloat()
+                                    viewModel.handlePreviewDoubleTap(offset.x / w, offset.y / h)
+                                }
+                            )
+                        }
+                        .pointerInput(Unit) {
+                            detectDragGestures { change, dragAmount ->
+                                change.consume()
+                                val w = stageSize.width.coerceAtLeast(1).toFloat()
+                                val h = stageSize.height.coerceAtLeast(1).toFloat()
+                                viewModel.moveSelectedElementBy(dragAmount.x / w, dragAmount.y / h)
+                            }
+                        }
+                )
             }
         }
 
@@ -384,9 +434,17 @@ fun EditorWorkspaceScreen(
                     if (selectedHtmlEl != null) {
                         QuickActionPill(
                             icon = Icons.Filled.Edit,
-                            label = "Edit HTML",
+                            label = "Edit",
                             onClick = { viewModel.setActiveSheet(ActiveSheet.HTML_ELEMENTS) }
                         )
+                        if (selectedHtmlEl.kind != HtmlElementKind.TEXT) {
+                            QuickActionPill(
+                                icon = Icons.Filled.DeleteSweep,
+                                label = "Delete Card+Text",
+                                tint = CoralAlert,
+                                onClick = { viewModel.deleteHtmlArea(selectedHtmlEl.key) }
+                            )
+                        }
                     }
 
                     if (selectedAudio != null) {

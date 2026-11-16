@@ -51,6 +51,7 @@ data class StudioUiState(
     val activeSheet: ActiveSheet = ActiveSheet.NONE,
     val selectedResolution: ExportResolution = ExportResolution.R720P,
     val selectedFps: Int = 24,
+    val showTapGuides: Boolean = false,
     val exportState: ExportUiState = ExportUiState.Idle,
     val statusBanner: String? = null
 )
@@ -271,6 +272,27 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun handlePreviewDoubleTap(normX: Float, normY: Float) {
+        handlePreviewTap(normX, normY)
+        val state = _uiState.value
+        val ovId = state.selectedOverlayId
+        if (ovId != null) {
+            val ov = state.overlays.firstOrNull { it.id == ovId } ?: return
+            setActiveSheet(
+                if (ov.type == OverlayType.TEXT) ActiveSheet.EDIT_TEXT
+                else ActiveSheet.EDIT_MEDIA_OVERLAY
+            )
+            return
+        }
+        if (state.selectedHtmlElementKey != null) {
+            setActiveSheet(ActiveSheet.HTML_ELEMENTS)
+        }
+    }
+
+    fun toggleTapGuides() {
+        _uiState.update { it.copy(showTapGuides = !it.showTapGuides) }
+    }
+
     fun moveSelectedElementBy(deltaXNorm: Float, deltaYNorm: Float) {
         val state = _uiState.value
         val selOverlay = state.selectedOverlayId
@@ -394,6 +416,42 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
             colorHex = existing?.colorHex,
             isDeleted = true
         )
+    }
+
+    fun deleteHtmlArea(key: String) {
+        val state = _uiState.value
+        val target = state.detectedHtmlElements.firstOrNull { it.key == key }
+        if (target == null) {
+            deleteHtmlElement(key)
+            return
+        }
+        val boxOv = state.htmlElementOverrides[key]
+        val bx0 = target.xNorm + (boxOv?.offsetXNorm ?: 0f) - 0.01f
+        val by0 = target.yNorm + (boxOv?.offsetYNorm ?: 0f) - 0.01f
+        val bx1 = bx0 + target.wNorm + 0.02f
+        val by1 = by0 + target.hNorm + 0.02f
+
+        val newMap = state.htmlElementOverrides.toMutableMap()
+        state.detectedHtmlElements.forEach { el ->
+            val ov = newMap[el.key]
+            val cx = el.xNorm + (ov?.offsetXNorm ?: 0f) + el.wNorm * 0.5f
+            val cy = el.yNorm + (ov?.offsetYNorm ?: 0f) + el.hNorm * 0.5f
+            val inside = (el.key == key) || (cx in bx0..bx1 && cy in by0..by1 && (el.wNorm * el.hNorm) <= (target.wNorm * target.hNorm * 1.05f))
+            if (inside) {
+                newMap[el.key] = (ov ?: HtmlElementOverride(
+                    key = el.key,
+                    kind = el.kind,
+                    originalText = el.originalText
+                )).copy(isDeleted = true)
+            }
+        }
+        _uiState.update {
+            it.copy(
+                htmlElementOverrides = newMap,
+                selectedHtmlElementKey = null
+            )
+        }
+        webController.syncElementOverrides(newMap)
     }
 
     fun restoreHtmlElement(key: String) {

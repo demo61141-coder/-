@@ -59,7 +59,10 @@ class WebViewCanvasController(private val context: Context) {
                     onReady()
                 }
             }
-            setOnTouchListener { _, _ -> true }
+            isClickable = false
+            isFocusable = false
+            isFocusableInTouchMode = false
+            setOnTouchListener { _, _ -> false }
         }
         webView = wv
         pendingHtml?.let { html ->
