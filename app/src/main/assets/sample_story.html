@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>News Documentary Visual Storytelling - Reporter Hasan</title>
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  html, body {
+    width: 100%;
+    height: 100%;
+    background-color: #05070a;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', system-ui, -apple-system, sans-serif;
+  }
+  #stage-wrapper {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  canvas {
+    background: #0b111e;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
+    display: block;
+  }
+</style>
+</head>
+<body>
+<div id="stage-wrapper">
+  <canvas id="stage"></canvas>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('stage');
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  // Logical Full HD Vertical Resolution (9:16)
+  const W = 1080;
+  const H = 1920;
+  canvas.width = W;
+  canvas.height = H;
+
+  // Responsive Viewport Scaling for Mobile/Desktop Screen Recording
+  function resize() {
+    const ww = window.innerWidth;
+    const wh = window.innerHeight;
+    const targetRatio = W / H;
+    const winRatio = ww / wh;
+    let cw, ch;
+    if (winRatio < targetRatio) {
+      cw = ww;
+      ch = ww / targetRatio;
+    } else {
+      ch = wh;
+      cw = wh * targetRatio;
+    }
+    canvas.style.width = `${Math.floor(cw)}px`;
+    canvas.style.height = `${Math.floor(ch)}px`;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // Total Duration: 1 minute 12 seconds = 72.0 seconds
+  const TOTAL_DURATION = 72.0;
+
+  // Storyboard Beats (Precisely mapped to 72 seconds)
+  const SCENES = [
+    {
+      id: 0,
+      start: 0.0,
+      end: 10.5,
+      headline: "ভূমি অফিসে ঘুষ ও দুদকের অভিযান",
+      sub: "কনেশ্বর ইউনিয়ন ভূমি অফিস, ডামুড্যা, শরীয়তপুর",
+      caption: "শরীয়তপুরের ডামুড্যা উপজেলার কনেশ্বর ইউনিয়ন ভূমি অফিসে নামজারির জন্য ঘুষ গ্রহণ ও টাকা ফেরতের ঘটনায় দুদকের অভিযান।"
+    },
+    {
+      id: 1,
+      start: 10.5,
+      end: 19.5,
+      headline: "দুদকের সমন্বিত জেলা কার্যালয়ের অভিযান",
+      sub: "নেতৃত্বে: সহকারী পরিচালক আরিফ হোসেন",
+      caption: "সোমবার প্রধান কার্যালয়ের নির্দেশে দুদকের মাদারীপুর সমন্বিত জেলা কার্যালয়ের সহকারী পরিচালক আরিফ হোসেনের নেতৃত্বে অভিযান চালানো হয়।"
+    },
+    {
+      id: 2,
+      start: 19.5,
+      end: 29.0,
+      headline: "নামজারির আবেদনে ৪ মাসের হয়রানি",
+      sub: "ভুক্তভোগী: এমডি আওলাদ হোসেন",
+      caption: "ভুক্তভোগী এমডি আওলাদ হোসেন অভিযোগ করেন, জমি কেনার পর নামজারির আবেদন করলে তাঁকে চার মাস ঘোরানো হয়।"
+    },
+    {
+      id: 3,
+      start: 29.0,
+      end: 39.5,
+      headline: "এক সপ্তাহে কাজের আশ্বাসে ১০,৫০০ টাকা ঘুষ",
+      sub: "অভিযুক্ত: মো. শরীয়ত উল্লাহ (ইউনিয়ন ভূমি সহকারী কর্মকর্তা)",
+      caption: "পরে এক সপ্তাহের মধ্যে কাজ করে দেওয়ার আশ্বাস দিয়ে ইউনিয়ন ভূমি সহকারী কর্মকর্তা মো. শরীয়ত উল্লাহ তাঁর কাছ থেকে ১০,৫০০ টাকা নেন।"
+    },
+    {
+      id: 4,
+      start: 39.5,
+      end: 50.5,
+      headline: "গণমাধ্যমের সামনে ১০,২০০ টাকা ফেরত",
+      sub: "ডিসিআর বাবদ ৩০০ টাকা রেখে বাকি অর্থ ফেরত",
+      caption: "বিষয়টি জানাজানি হলে ডিসিআর বাবদ ৩০০ টাকা রেখে বাকি ১০,২০০ টাকা গণমাধ্যমকর্মীদের উপস্থিতিতে ফেরত দেওয়া হয়।"
+    },
+    {
+      id: 5,
+      start: 50.5,
+      end: 61.0,
+      headline: "দুদক দলের সামনে স্বীকারোক্তি ও প্রতিবেদন",
+      sub: "প্রাথমিক সত্যতা পাওয়ায় প্রধান কার্যালয়ে প্রতিবেদন",
+      caption: "অভিযানকালে অভিযুক্ত কর্মকর্তা টাকা ফেরতের কথা স্বীকার করেন। প্রাথমিক সত্যতা পাওয়ায় দুদকের প্রধান কার্যালয়ে প্রতিবেদন পাঠানো হবে।"
+    },
+    {
+      id: 6,
+      start: 61.0,
+      end: 72.0,
+      headline: "১৮ নভেম্বর তদন্তের নির্দেশ ইউএনও'র",
+      sub: "মো. সালাহউদ্দিন আইয়ূবী, উপজেলা নির্বাহী কর্মকর্তা, ডামুড্যা",
+      caption: "ডামুড্যা উপজেলা নির্বাহী কর্মকর্তা মো. সালাহউদ্দিন আইয়ূবী জানিয়েছেন, আগামী ১৮ নভেম্বর দুপক্ষকে ডেকে তদন্ত সাপেক্ষে রিপোর্ট দাখিল করা হবে।"
+    }
+  ];
+
+  // Easing & Math Helpers
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+  const lerp = (a, b, t) => a + (b - a) * clamp(t, 0, 1);
+  const easeOutCubic = t => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
+  const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const easeOutBack = t => {
+    const c1 = 1.70158;
+    const c3 = c1 + 1;
+    const x = clamp(t, 0, 1);
+    return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+  };
+
+  // Helper: Draw Rounded Rect
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // Helper: Wrap Bengali Text
+  function drawWrappedText(text, x, y, maxWidth, lineHeight, align = 'center') {
+    ctx.textAlign = align;
+    const words = text.split(' ');
+    let line = '';
+    const lines = [];
+    for (let i = 0; i < words.length; i++) {
+      const testLine = line + words[i] + ' ';
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && i > 0) {
+        lines.push(line.trim());
+        line = words[i] + ' ';
+      } else {
+        line = testLine;
+      }
+    }
+    lines.push(line.trim());
+    lines.forEach((l, idx) => {
+      ctx.fillText(l, x, y + idx * lineHeight);
+    });
+    return lines.length;
+  }
+
+  // Shared Graphic Elements
+  function drawGridBackground(time, tint = '#1e293b') {
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#090e1a');
+    grad.addColorStop(0.5, '#111a2e');
+    grad.addColorStop(1, '#070b14');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle moving perspective grid
+    ctx.save();
+    ctx.strokeStyle = tint;
+    ctx.globalAlpha = 0.16;
+    ctx.lineWidth = 1.5;
+    const spacing = 72;
+    const offset = (time * 18) % spacing;
+    for (let x = 0; x <= W; x += spacing) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    for (let y = offset; y <= H; y += spacing) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Cinematic Vignette
+    const vig = ctx.createRadialGradient(W / 2, H / 2, 320, W / 2, H / 2, 1150);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(2,4,10,0.78)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // Vector Character Helper (Procedural Documentary Illustration)
+  function drawPerson(x, y, scale, config = {}) {
+    const {
+      shirtColor = '#334155',
+      tieColor = null,
+      skinColor = '#d99b72',
+      hairColor = '#1e293b',
+      expression = 'neutral', // neutral, sad, greedy, serious, confident
+      armAngleL = 0.2,
+      armAngleR = -0.2,
+      hasBadge = false,
+      hasGlasses = false,
+      holdingItem = null // 'money', 'file', 'mic', 'stamp'
+    } = config;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, 195, 78, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Torso / Suit
+    ctx.fillStyle = shirtColor;
+    roundRect(-62, 35, 124, 155, 28);
+    ctx.fill();
+
+    // Collar / Tie
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath();
+    ctx.moveTo(-22, 35);
+    ctx.lineTo(0, 68);
+    ctx.lineTo(22, 35);
+    ctx.closePath();
+    ctx.fill();
+
+    if (tieColor) {
+      ctx.fillStyle = tieColor;
+      ctx.beginPath();
+      ctx.moveTo(-8, 52);
+      ctx.lineTo(8, 52);
+      ctx.lineTo(12, 138);
+      ctx.lineTo(0, 152);
+      ctx.lineTo(-12, 138);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    if (hasBadge) {
+      // Official ID Card / Badge
+      ctx.fillStyle = '#fbbf24';
+      roundRect(22, 68, 28, 36, 4);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(26, 74, 20, 8);
+      ctx.fillRect(26, 86, 14, 4);
+    }
+
+    // Neck
+    ctx.fillStyle = skinColor;
+    roundRect(-16, 12, 32, 32, 10);
+    ctx.fill();
+
+    // Head
+    ctx.fillStyle = skinColor;
+    roundRect(-38, -58, 76, 82, 34);
+    ctx.fill();
+
+    // Hair
+    ctx.fillStyle = hairColor;
+    ctx.beginPath();
+    ctx.arc(0, -34, 40, Math.PI, 0, false);
+    ctx.quadraticCurveTo(42, -20, 36, -15);
+    ctx.quadraticCurveTo(10, -38, -36, -18);
+    ctx.quadraticCurveTo(-42, -28, -38, -34);
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.arc(-15, -20, 4.5, 0, Math.PI * 2);
+    ctx.arc(15, -20, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyebrows based on expression
+    ctx.strokeStyle = hairColor;
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    if (expression === 'sad') {
+      ctx.moveTo(-24, -28); ctx.lineTo(-8, -33);
+      ctx.moveTo(8, -33); ctx.lineTo(24, -28);
+    } else if (expression === 'serious' || expression === 'greedy') {
+      ctx.moveTo(-24, -33); ctx.lineTo(-8, -28);
+      ctx.moveTo(8, -28); ctx.lineTo(24, -33);
+    } else {
+      ctx.moveTo(-24, -31); ctx.lineTo(-8, -31);
+      ctx.moveTo(8, -31); ctx.lineTo(24, -31);
+    }
+    ctx.stroke();
+
+    if (hasGlasses) {
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 2.5;
+      roundRect(-27, -28, 22, 16, 4);
+      ctx.stroke();
+      roundRect(5, -28, 22, 16, 4);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-5, -20);
+      ctx.lineTo(5, -20);
+      ctx.stroke();
+    }
+
+    // Mouth
+    ctx.strokeStyle = '#7c2d12';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    if (expression === 'sad') {
+      ctx.arc(0, 8, 12, Math.PI * 1.15, Math.PI * 1.85);
+    } else if (expression === 'greedy' || expression === 'confident') {
+      ctx.arc(0, -4, 13, Math.PI * 0.15, Math.PI * 0.85);
+    } else {
+      ctx.moveTo(-11, 2);
+      ctx.lineTo(11, 2);
+    }
+    ctx.stroke();
+
+    // Left Arm
+    ctx.save();
+    ctx.translate(-58, 52);
+    ctx.rotate(armAngleL);
+    ctx.fillStyle = shirtColor;
+    roundRect(-14, 0, 28, 95, 14);
+    ctx.fill();
+    ctx.fillStyle = skinColor;
+    ctx.beginPath();
+    ctx.arc(0, 98, 13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Right Arm
+    ctx.save();
+    ctx.translate(58, 52);
+    ctx.rotate(armAngleR);
+    ctx.fillStyle = shirtColor;
+    roundRect(-14, 0, 28, 95, 14);
+    ctx.fill();
+    ctx.fillStyle = skinColor;
+    ctx.beginPath();
+    ctx.arc(0, 98, 13, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (holdingItem === 'file') {
+      ctx.fillStyle = '#f59e0b';
+      roundRect(-22, 85, 48, 60, 5);
+      ctx.fill();
+      ctx.fillStyle = '#fef3c7';
+      ctx.fillRect(-16, 92, 36, 44);
+    } else if (holdingItem === 'mic') {
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(-4, 65, 8, 45);
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(0, 56, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('NEWS', 0, 60);
+    }
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  // Helper: Draw Banknote Bundle / Money
+  function drawMoneyStack(x, y, scale = 1, label = '') {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    roundRect(-56, -24, 118, 62, 8);
+    ctx.fill();
+
+    // Layered notes
+    for (let i = 2; i >= 0; i--) {
+      ctx.fillStyle = i === 0 ? '#10b981' : '#059669';
+      roundRect(-60 + i * 3, -30 + i * 3, 120, 58, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#a7f3d0';
+      ctx.lineWidth = 2;
+      roundRect(-52 + i * 3, -22 + i * 3, 104, 42, 4);
+      ctx.stroke();
+    }
+
+    // Center emblem & Taka symbol
+    ctx.fillStyle = '#064e3b';
+    ctx.beginPath();
+    ctx.arc(0, -1, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ecfdf5';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('৳', 0, 7);
+
+    // Paper Strap
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(-14, -30, 28, 58);
+    ctx.fillStyle = '#854d0e';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText('BDT', 0, 4);
+
+    if (label) {
+      ctx.fillStyle = '#10b981';
+      roundRect(-75, 38, 150, 34, 17);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText(label, 0, 62);
+    }
+    ctx.restore();
+  }
+
+  // Helper: Draw Official Document / Mutation File
+  function drawDocument(x, y, scale = 1, title = 'নামজারি ফাইল', stampText = '', stampColor = '#ef4444') {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    roundRect(-78, -98, 168, 212, 10);
+    ctx.fill();
+
+    ctx.fillStyle = '#f8fafc';
+    roundRect(-84, -106, 168, 212, 10);
+    ctx.fill();
+
+    // Header strip
+    ctx.fillStyle = '#1e3a8a';
+    roundRect(-84, -106, 168, 36, 10);
+    ctx.fill();
+    ctx.fillRect(-84, -84, 168, 14);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(title, 0, -81);
+
+    // Document Lines
+    ctx.fillStyle = '#94a3b8';
+    for (let i = 0; i < 6; i++) {
+      const w = i === 5 ? 85 : 132;
+      roundRect(-66, -50 + i * 20, w, 8, 4);
+      ctx.fill();
+    }
+
+    if (stampText) {
+      ctx.save();
+      ctx.translate(0, 35);
+      ctx.rotate(-0.22);
+      ctx.strokeStyle = stampColor;
+      ctx.lineWidth = 4;
+      roundRect(-62, -22, 124, 44, 6);
+      ctx.stroke();
+      ctx.fillStyle = stampColor;
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText(stampText, 0, 7);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // SCENE 0 (0.0s - 10.5s): Map Zoom to Shariatpur -> Damudya -> Koneshwar Land Office + Bribe & Raid Overview
+  // =========================================================================
+  function renderScene0(t, localTime) {
+    drawGridBackground(localTime, '#1d4ed8');
+
+    const zoomP = easeInOutCubic(clamp(localTime / 3.8, 0, 1));
+    const cardP = easeOutBack(clamp((localTime - 3.2) / 1.0, 0, 1));
+    const alertP = easeOutCubic(clamp((localTime - 5.5) / 1.2, 0, 1));
+
+    // 2.5D Regional Map Card
+    ctx.save();
+    ctx.translate(W / 2, 650);
+    const mapScale = lerp(0.85, 1.12, zoomP);
+    ctx.scale(mapScale, mapScale);
+
+    // Map Frame
+    ctx.fillStyle = '#0f172a';
+    roundRect(-420, -290, 840, 580, 28);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Stylized Bangladesh / Shariatpur River & District Geometry
+    ctx.save();
+    roundRect(-410, -280, 820, 560, 24);
+    ctx.clip();
+
+    // Landmass
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(-410, -280, 820, 560);
+
+    // Padma / Meghna River Channels
+    ctx.strokeStyle = '#0284c7';
+    ctx.lineWidth = 38;
+    ctx.beginPath();
+    ctx.moveTo(-420, -180);
+    ctx.bezierCurveTo(-120, -140, 80, -40, 420, 60);
+    ctx.stroke();
+
+    ctx.lineWidth = 22;
+    ctx.beginPath();
+    ctx.moveTo(120, -280);
+    ctx.bezierCurveTo(160, -80, 90, 120, 180, 290);
+    ctx.stroke();
+
+    // District Highlight Polygon (Shariatpur -> Damudya)
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.22)';
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-120, -30);
+    ctx.lineTo(60, -60);
+    ctx.lineTo(110, 80);
+    ctx.lineTo(-40, 140);
+    ctx.lineTo(-150, 60);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Radar Pulse on Damudya - Koneshwar
+    const pulse = (localTime * 1.4) % 1;
+    ctx.strokeStyle = `rgba(239, 68, 68, ${1 - pulse})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(-20, 35, 20 + pulse * 95, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Location Pin
+    const pinBounce = Math.abs(Math.sin(localTime * 4)) * 10;
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(-20, 15 - pinBounce, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-36, 22 - pinBounce);
+    ctx.lineTo(-4, 22 - pinBounce);
+    ctx.lineTo(-20, 46 - pinBounce);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(-20, 15 - pinBounce, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Location Badges on Map
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+    roundRect(-270, -240, 260, 56, 12);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 26px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('জেলা: শরীয়তপুর', -140, -203);
+
+    ctx.fillStyle = 'rgba(127, 29, 29, 0.94)';
+    roundRect(-210, 65, 380, 68, 14);
+    ctx.fill();
+    ctx.strokeStyle = '#fca5a5';
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 26px sans-serif';
+    ctx.fillText('কনেশ্বর ইউনিয়ন ভূমি অফিস, ডামুড্যা', -20, 108);
+
+    ctx.restore();
+    ctx.restore();
+
+    // Bottom Visual Summary: Land Office Building + ACC Raid Shield
+    if (cardP > 0.01) {
+      ctx.save();
+      ctx.translate(W / 2, 1180);
+      ctx.scale(cardP, cardP);
+
+      // Union Land Office Building
+      ctx.fillStyle = '#1e293b';
+      roundRect(-420, -140, 390, 260, 20);
+      ctx.fill();
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Roof & Signboard
+      ctx.fillStyle = '#0f766e';
+      roundRect(-390, -115, 330, 54, 10);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('কনেশ্বর ইউনিয়ন ভূমি অফিস', -225, -80);
+
+      // Pillars & Door
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(-360, -45, 270, 145);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(-255, 10, 60, 90);
+
+      // Right Card: ACC Action & Bribe Alert
+      ctx.fillStyle = '#1e1b4b';
+      roundRect(30, -140, 390, 260, 20);
+      ctx.fill();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillText('দুর্নীতি দমন কমিশন (দুদক)', 225, -85);
+
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '24px sans-serif';
+      ctx.fillText('নামজারিতে ঘুষ গ্রহণ ও', 225, -35);
+      ctx.fillText('টাকা ফেরতের ঘটনায়', 225, 2);
+
+      ctx.fillStyle = '#ef4444';
+      roundRect(95, 28, 260, 58, 12);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillText('সরাসরি অভিযান', 225, 66);
+
+      ctx.restore();
+    }
+
+    // Animated Connection Arrow between Office & ACC
+    if (alertP > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = alertP;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(W / 2, 1170, 34, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 34px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚡', W / 2, 1182);
+      ctx.restore();
+    }
+  }
+
+  // =========================================================================
+  // SCENE 1 (10.5s - 19.5s): Monday Headquarters Order -> Madaripur ACC -> AD Arif Hossain
+  // =========================================================================
+  function renderScene1(t, localTime) {
+    drawGridBackground(localTime, '#0ea5e9');
+
+    const step1 = easeOutBack(clamp(localTime / 1.2, 0, 1));
+    const step2 = easeOutCubic(clamp((localTime - 1.5) / 1.4, 0, 1));
+    const step3 = easeOutBack(clamp((localTime - 3.2) / 1.3, 0, 1));
+
+    // Top Node: ACC Head Office Directive (Monday)
+    ctx.save();
+    ctx.translate(W / 2, 460);
+    ctx.scale(step1, step1);
+
+    ctx.fillStyle = '#0f172a';
+    roundRect(-410, -90, 820, 175, 24);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Day Tag
+    ctx.fillStyle = '#0284c7';
+    roundRect(-380, -68, 175, 48, 12);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 25px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('সোমবার', -292, -35);
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 32px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('দুদক প্রধান কার্যালয়ের নির্দেশ', -180, -34);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '25px sans-serif';
+    ctx.fillText('মাদারীপুর সমন্বিত জেলা কার্যালয়ে অভিযান পরিচালনার আদেশ', -380, 36);
+    ctx.restore();
+
+    // Animated Directive Flow Line
+    if (step2 > 0) {
+      ctx.save();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 6;
+      ctx.setLineDash([14, 10]);
+      ctx.lineDashOffset = -localTime * 60;
+      ctx.beginPath();
+      ctx.moveTo(W / 2, 550);
+      ctx.lineTo(W / 2, 550 + 130 * step2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Center-Bottom: ACC Team & Assistant Director Arif Hossain
+    if (step3 > 0.01) {
+      ctx.save();
+      ctx.translate(W / 2, 1030);
+      ctx.scale(step3, step3);
+
+      ctx.fillStyle = '#111827';
+      roundRect(-430, -340, 860, 670, 30);
+      ctx.fill();
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+
+      // Office Banner
+      ctx.fillStyle = '#065f46';
+      roundRect(-390, -310, 780, 66, 14);
+      ctx.fill();
+      ctx.fillStyle = '#ecfdf5';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('দুদক মাদারীপুর সমন্বিত জেলা কার্যালয়', 0, -268);
+
+      // Team Members (Left & Right) + Lead Officer (Center)
+      const walkBob = Math.sin(localTime * 5) * 6;
+      drawPerson(-230, -20 + walkBob, 1.15, {
+        shirtColor: '#1e293b',
+        tieColor: '#0284c7',
+        expression: 'serious',
+        hasBadge: true
+      });
+      drawPerson(230, -20 - walkBob, 1.15, {
+        shirtColor: '#1e293b',
+        tieColor: '#0284c7',
+        expression: 'serious',
+        hasBadge: true,
+        holdingItem: 'file'
+      });
+      // Lead Officer: AD Arif Hossain
+      drawPerson(0, -40 + walkBob * 0.7, 1.38, {
+        shirtColor: '#0f172a',
+        tieColor: '#10b981',
+        expression: 'confident',
+        hasBadge: true,
+        hasGlasses: true
+      });
+
+      // Nameplate Card
+      ctx.fillStyle = '#022c22';
+      roundRect(-360, 205, 720, 105, 18);
+      ctx.fill();
+      ctx.strokeStyle = '#34d399';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#34d399';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillText('অভিযানের নেতৃত্বে', 0, 245);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 34px sans-serif';
+      ctx.fillText('আরিফ হোসেন (সহকারী পরিচালক, দুদক)', 0, 288);
+
+      ctx.restore();
+    }
+  }
+
+  // =========================================================================
+  // SCENE 2 (19.5s - 29.0s): Victim Md. Awlad Hossain + Land Purchase + 4 Months Harassment
+  // =========================================================================
+  function renderScene2(t, localTime) {
+    drawGridBackground(localTime, '#f59e0b');
+
+    const enterP = easeOutBack(clamp(localTime / 1.1, 0, 1));
+    const clockSpin = localTime * 3.8;
+    const monthProgress = clamp((localTime - 1.2) / 5.5, 0, 1);
+
+    // Top Victim Profile Card
+    ctx.save();
+    ctx.translate(W / 2, 430);
+    ctx.scale(enterP, enterP);
+    ctx.fillStyle = '#1e293b';
+    roundRect(-420, -70, 840, 140, 22);
+    ctx.fill();
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = '#f59e0b';
+    roundRect(-390, -42, 180, 84, 14);
+    ctx.fill();
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ভুক্তভোগী', -300, 10);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 36px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('এমডি আওলাদ হোসেন', -180, -6);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '25px sans-serif';
+    ctx.fillText('অভিযোগ: জমি কেনার পর নামজারির আবেদন', -180, 36);
+    ctx.restore();
+
+    // Visual Storytelling Stage: Victim holding land deed while 4 months pass
+    ctx.save();
+    ctx.translate(W / 2, 920);
+
+    // Background Office Counter
+    ctx.fillStyle = '#0f172a';
+    roundRect(-430, -340, 860, 680, 28);
+    ctx.fill();
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Land Deed Icon on Left
+    drawDocument(-250, -140, 1.05, 'জমির দলিল', 'আবেদন জমা', '#0284c7');
+
+    // Victim Character in Center-Left
+    const sway = Math.sin(localTime * 3) * 5;
+    drawPerson(-230, 110 + sway, 1.25, {
+      shirtColor: '#475569',
+      expression: 'sad',
+      armAngleL: 0.3,
+      armAngleR: -0.45,
+      holdingItem: 'file'
+    });
+
+    // Animated 4-Month Delay Clock & Timeline on Right
+    ctx.save();
+    ctx.translate(185, -95);
+    // Clock Face
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.arc(0, 0, 118, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 8;
+    ctx.stroke();
+
+    // Clock Ticks
+    for (let i = 0; i < 12; i++) {
+      const ang = (i * Math.PI) / 6;
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(ang) * 92, Math.sin(ang) * 92);
+      ctx.lineTo(Math.cos(ang) * 106, Math.sin(ang) * 106);
+      ctx.stroke();
+    }
+
+    // Fast Spinning Hands
+    ctx.strokeStyle = '#f8fafc';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(clockSpin) * 78, Math.sin(clockSpin) * 78);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(clockSpin * 0.25) * 55, Math.sin(clockSpin * 0.25) * 55);
+    ctx.stroke();
+    ctx.restore();
+
+    // 4-Month Progress Bar & Counter
+    const monthsCount = Math.min(4, Math.floor(monthProgress * 4) + 1);
+    ctx.fillStyle = '#7f1d1d';
+    roundRect(10, 65, 360, 195, 20);
+    ctx.fill();
+    ctx.strokeStyle = '#f87171';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = '#fca5a5';
+    ctx.font = 'bold 26px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('হয়রানির সময়কাল', 190, 112);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 54px sans-serif';
+    ctx.fillText(`${monthsCount} মাস`, 190, 178);
+
+    // 4 Segment Bars
+    for (let m = 0; m < 4; m++) {
+      const active = monthProgress >= m * 0.24;
+      ctx.fillStyle = active ? '#ef4444' : '#450a0a';
+      roundRect(38 + m * 78, 202, 66, 24, 6);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // SCENE 3 (29.0s - 39.5s): 1-Week Promise -> Officer Md. Shariat Ullah takes 10,500 Taka
+  // =========================================================================
+  function renderScene3(t, localTime) {
+    drawGridBackground(localTime, '#ef4444');
+
+    const dealP = easeOutCubic(clamp(localTime / 1.5, 0, 1));
+    const moneyFlow = easeInOutCubic(clamp((localTime - 2.0) / 3.0, 0, 1));
+    const badgeP = easeOutBack(clamp((localTime - 4.5) / 1.2, 0, 1));
+
+    // Top Deal Banner: 1 Week Promise
+    ctx.save();
+    ctx.translate(W / 2, 425);
+    ctx.scale(dealP, dealP);
+    ctx.fillStyle = '#0f172a';
+    roundRect(-420, -65, 840, 130, 22);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 30px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('১ সপ্তাহের মধ্যে নামজারি করে দেওয়ার আশ্বাস', 0, -10);
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText('দাবি করা হয়: ১০,৫০০ টাকা (সাড়ে দশ হাজার টাকা)', 0, 36);
+    ctx.restore();
+
+    // Main Transaction Scene
+    ctx.save();
+    ctx.translate(W / 2, 930);
+
+    ctx.fillStyle = '#111827';
+    roundRect(-430, -350, 860, 700, 30);
+    ctx.fill();
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Desk
+    ctx.fillStyle = '#334155';
+    roundRect(-390, 90, 780, 32, 8);
+    ctx.fill();
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(-350, 122, 700, 160);
+
+    // Left: Victim giving money
+    drawPerson(-245, -40, 1.22, {
+      shirtColor: '#475569',
+      expression: 'sad',
+      armAngleR: -0.75
+    });
+
+    // Right: Accused Officer Md. Shariat Ullah receiving money
+    drawPerson(245, -40, 1.25, {
+      shirtColor: '#1e3a8a',
+      tieColor: '#ef4444',
+      expression: 'greedy',
+      armAngleL: 0.75,
+      hasBadge: true
+    });
+
+    // Animated Money Transfer from Victim (-140, 30) to Officer (+140, 30)
+    const mx = lerp(-145, 145, moneyFlow);
+    const my = 20 - Math.sin(moneyFlow * Math.PI) * 55;
+    drawMoneyStack(mx, my, 1.15, '১০,৫০০ ৳');
+
+    // Direction Arrow
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 5;
+    ctx.setLineDash([12, 8]);
+    ctx.beginPath();
+    ctx.moveTo(-120, -140);
+    ctx.quadraticCurveTo(0, -210, 120, -140);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Accused Officer Identification Card at Bottom of Stage
+    if (badgeP > 0.01) {
+      ctx.save();
+      ctx.translate(0, 225);
+      ctx.scale(badgeP, badgeP);
+      ctx.fillStyle = '#7f1d1d';
+      roundRect(-370, -55, 740, 110, 16);
+      ctx.fill();
+      ctx.strokeStyle = '#fca5a5';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('অভিযুক্ত: মো. শরীয়ত উল্লাহ', 0, -10);
+      ctx.fillStyle = '#fecaca';
+      ctx.font = '24px sans-serif';
+      ctx.fillText('ইউনিয়ন ভূমি সহকারী কর্মকর্তা, কনেশ্বর ইউনিয়ন ভূমি অফিস', 0, 32);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // SCENE 4 (39.5s - 50.5s): Money Split Visual (10,500 -> 300 DCR + 10,200 Refunded before Media)
+  // =========================================================================
+  function renderScene4(t, localTime) {
+    drawGridBackground(localTime, '#10b981');
+
+    const splitP = easeInOutCubic(clamp((localTime - 1.0) / 2.8, 0, 1));
+    const mediaP = easeOutBack(clamp((localTime - 3.5) / 1.2, 0, 1));
+
+    // Top Header: Exposure & Breakdown
+    ctx.save();
+    ctx.translate(W / 2, 415);
+    ctx.fillStyle = '#0f172a';
+    roundRect(-420, -60, 840, 120, 20);
+    ctx.fill();
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('বিষয়টি জানাজানি হওয়ার পর অর্থের হিসাব ও ফেরত', 0, -10);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '25px sans-serif';
+    ctx.fillText('মোট গৃহীত: ১০,৫০০ টাকা → ডিসিআর ফি বাদে বাকি অর্থ ফেরত', 0, 32);
+    ctx.restore();
+
+    // Visual Equation & Split Diagram
+    ctx.save();
+    ctx.translate(W / 2, 890);
+
+    ctx.fillStyle = '#111827';
+    roundRect(-430, -350, 860, 730, 30);
+    ctx.fill();
+    ctx.strokeStyle = '#34d399';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Total Amount Node at Top
+    drawMoneyStack(0, -245, 1.05, 'মোট: ১০,৫০০ টাকা');
+
+    // Split Branches
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(0, -145);
+    ctx.lineTo(lerp(0, -220, splitP), lerp(-145, -35, splitP));
+    ctx.stroke();
+
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(0, -145);
+    ctx.lineTo(lerp(0, 210, splitP), lerp(-145, -35, splitP));
+    ctx.stroke();
+
+    // Left Box: DCR Fee 300 Taka
+    ctx.save();
+    ctx.translate(-220, 65);
+    ctx.scale(lerp(0.5, 1, splitP), lerp(0.5, 1, splitP));
+    ctx.fillStyle = '#1e293b';
+    roundRect(-175, -90, 350, 195, 20);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 25px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ডিসিআর (DCR) বাবদ', 0, -42);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 46px sans-serif';
+    ctx.fillText('৩০০ টাকা', 0, 22);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '22px sans-serif';
+    ctx.fillText('(সরকারি রশিদ বাবদ রাখা হয়)', 0, 68);
+    ctx.restore();
+
+    // Right Box: Refunded 10,200 Taka
+    ctx.save();
+    ctx.translate(210, 65);
+    ctx.scale(lerp(0.5, 1, splitP), lerp(0.5, 1, splitP));
+    ctx.fillStyle = '#064e3b';
+    roundRect(-185, -90, 370, 195, 20);
+    ctx.fill();
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    ctx.fillStyle = '#6ee7b7';
+    ctx.font = 'bold 25px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ফেরত দেওয়া অর্থ', 0, -42);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 46px sans-serif';
+    ctx.fillText('১০,২০০ টাকা', 0, 22);
+    ctx.fillStyle = '#a7f3d0';
+    ctx.font = '22px sans-serif';
+    ctx.fillText('(দশ হাজার দুশো টাকা)', 0, 68);
+    ctx.restore();
+
+    // Bottom Strip: Returned in Presence of Journalists
+    if (mediaP > 0.01) {
+      ctx.save();
+      ctx.translate(0, 265);
+      ctx.scale(mediaP, mediaP);
+
+      ctx.fillStyle = '#1e1b4b';
+      roundRect(-380, -70, 760, 150, 20);
+      ctx.fill();
+      ctx.strokeStyle = '#818cf8';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Media Camera & Mic Visual
+      drawPerson(-260, -10, 0.72, {
+        shirtColor: '#312e81',
+        expression: 'serious',
+        armAngleR: -0.7,
+        holdingItem: 'mic'
+      });
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 30px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('গণমাধ্যমকর্মীদের উপস্থিতিতে ফেরত', -155, -14);
+      ctx.fillStyle = '#c7d2fe';
+      ctx.font = '24px sans-serif';
+      ctx.fillText('সাংবাদিকদের সামনেই ১০,২০০ টাকা বুঝিয়ে দেওয়া হয়', -155, 30);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // SCENE 5 (50.5s - 61.0s): Confession before ACC Team + Official Report to Head Office
+  // =========================================================================
+  function renderScene5(t, localTime) {
+    drawGridBackground(localTime, '#6366f1');
+
+    const confP = easeOutBack(clamp(localTime / 1.2, 0, 1));
+    const reportP = easeInOutCubic(clamp((localTime - 3.0) / 2.2, 0, 1));
+
+    ctx.save();
+    ctx.translate(W / 2, 860);
+
+    // Main Panel
+    ctx.fillStyle = '#0f172a';
+    roundRect(-430, -460, 860, 920, 30);
+    ctx.fill();
+    ctx.strokeStyle = '#818cf8';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Top Scene: Accused Confessing to ACC Team
+    ctx.save();
+    ctx.translate(0, -230);
+    ctx.scale(confP, confP);
+
+    drawPerson(-210, -20, 1.15, {
+      shirtColor: '#1e3a8a',
+      expression: 'sad',
+      armAngleR: -0.35
+    });
+
+    // Speech Bubble: Confession
+    ctx.fillStyle = '#fef2f2';
+    roundRect(-80, -145, 450, 125, 20);
+    ctx.fill();
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = '#991b1b';
+    ctx.font = 'bold 26px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('অভিযুক্ত কর্মকর্তার স্বীকারোক্তি:', 145, -96);
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 25px sans-serif';
+    ctx.fillText('"টাকা ফেরত দেওয়ার বিষয়টি সত্য"', 145, -54);
+
+    // ACC Lead Officer listening
+    drawPerson(240, 10, 1.15, {
+      shirtColor: '#0f172a',
+      tieColor: '#10b981',
+      expression: 'serious',
+      hasBadge: true,
+      hasGlasses: true
+    });
+    ctx.restore();
+
+    // Divider
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-380, 15);
+    ctx.lineTo(380, 15);
+    ctx.stroke();
+
+    // Bottom Scene: Primary Truth Found -> Report Sent to ACC Head Office
+    ctx.save();
+    ctx.translate(0, 225);
+
+    // Left: Verified Document
+    drawDocument(-220, -10, 1.05, 'তদন্ত প্রতিবেদন', 'সত্যতা মিলেছে', '#10b981');
+
+    // Animated Transfer Arrow to ACC HQ
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(-90, -10);
+    ctx.lineTo(lerp(-90, 85, reportP), -10);
+    ctx.stroke();
+
+    // Right: ACC Head Office Card
+    ctx.fillStyle = '#1e1b4b';
+    roundRect(95, -135, 295, 250, 20);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 26px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('দুদক প্রধান কার্যালয়', 242, -75);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '24px sans-serif';
+    ctx.fillText('প্রাথমিক সত্যতা পাওয়ায়', 242, -20);
+    ctx.fillText('প্রতিবেদন পাঠানো হবে', 242, 18);
+
+    ctx.fillStyle = '#10b981';
+    roundRect(142, 48, 200, 44, 12);
+    ctx.fill();
+    ctx.fillStyle = '#052e16';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText('কার্যক্রম চলমান', 242, 77);
+
+    ctx.restore();
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // SCENE 6 (61.0s - 72.0s): UNO Md. Salahuddin Ayyubi -> Notice to Both Parties -> Nov 18 Investigation
+  // =========================================================================
+  function renderScene6(t, localTime) {
+    drawGridBackground(localTime, '#0284c7');
+
+    const unoP = easeOutBack(clamp(localTime / 1.2, 0, 1));
+    const calP = easeOutBack(clamp((localTime - 2.0) / 1.3, 0, 1));
+    const noticeP = easeOutCubic(clamp((localTime - 3.6) / 1.5, 0, 1));
+
+    ctx.save();
+    ctx.translate(W / 2, 860);
+
+    // Main Container
+    ctx.fillStyle = '#0f172a';
+    roundRect(-430, -470, 860, 940, 30);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    // Top: UNO Official Statement
+    ctx.save();
+    ctx.translate(0, -250);
+    ctx.scale(unoP, unoP);
+
+    drawPerson(-240, -10, 1.22, {
+      shirtColor: '#1e293b',
+      tieColor: '#0284c7',
+      expression: 'confident',
+      hasGlasses: true
+    });
+
+    ctx.fillStyle = '#1e293b';
+    roundRect(-115, -135, 495, 235, 22);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('ডামুড্যা উপজেলা নির্বাহী কর্মকর্তা (ইউএনও)', -85, -88);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 34px sans-serif';
+    ctx.fillText('মো. সালাহউদ্দিন আইয়ূবী', -85, -40);
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '24px sans-serif';
+    ctx.fillText('দুপক্ষকে নোটিশ করে ডেকে তদন্ত', -85, 12);
+    ctx.fillText('সাপেক্ষে রিপোর্ট দাখিল করা হবে।', -85, 48);
+    ctx.restore();
+
+    // Bottom Left: November 18 Calendar Card
+    if (calP > 0.01) {
+      ctx.save();
+      ctx.translate(-205, 195);
+      ctx.scale(calP, calP);
+
+      ctx.fillStyle = '#1e293b';
+      roundRect(-175, -175, 350, 350, 24);
+      ctx.fill();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+
+      // Calendar Top Header
+      ctx.fillStyle = '#ef4444';
+      roundRect(-175, -175, 350, 78, 24);
+      ctx.fill();
+      ctx.fillRect(-175, -125, 350, 28);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('নভেম্বর', 0, -124);
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 112px sans-serif';
+      ctx.fillText('১৮', 0, 30);
+
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = 'bold 26px sans-serif';
+      ctx.fillText('শুনানি ও তদন্তের তারিখ', 0, 118);
+      ctx.restore();
+    }
+
+    // Bottom Right: Notice to Both Parties -> Investigation Report
+    if (noticeP > 0.01) {
+      ctx.save();
+      ctx.translate(205, 195);
+      ctx.globalAlpha = noticeP;
+
+      ctx.fillStyle = '#1e293b';
+      roundRect(-185, -175, 370, 350, 24);
+      ctx.fill();
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      const items = [
+        { icon: '📩', title: 'দুপক্ষকে নোটিশ', sub: 'ভুক্তভোগী ও অভিযুক্তকে তলব' },
+        { icon: '🔍', title: 'সরেজমিন তদন্ত', sub: 'অভিযোগ যাচাই-বাছাই' },
+        { icon: '📑', title: 'রিপোর্ট দাখিল', sub: 'তদন্ত সাপেক্ষে প্রতিবেদন' }
+      ];
+
+      items.forEach((it, idx) => {
+        const iy = -105 + idx * 105;
+        ctx.fillStyle = '#0f172a';
+        roundRect(-160, iy - 38, 320, 84, 14);
+        ctx.fill();
+
+        ctx.font = '32px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(it.icon, -142, iy + 12);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.fillText(it.title, -92, iy - 2);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '20px sans-serif';
+        ctx.fillText(it.sub, -92, iy + 28);
+      });
+
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // BROADCAST NEWS OVERLAY CHROME (Top Header, Headline Banner, Subtitles, Timeline)
+  // =========================================================================
+  function renderNewsChrome(currentTime, currentScene) {
+    // 1. Top Broadcast Header Bar
+    ctx.fillStyle = 'rgba(9, 14, 26, 0.92)';
+    ctx.fillRect(0, 0, W, 130);
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 130);
+    ctx.lineTo(W, 130);
+    ctx.stroke();
+
+    // Brand Badge: REPORTER HASAN
+    const brandGrad = ctx.createLinearGradient(44, 34, 380, 96);
+    brandGrad.addColorStop(0, '#dc2626');
+    brandGrad.addColorStop(1, '#991b1b');
+    ctx.fillStyle = brandGrad;
+    roundRect(44, 34, 330, 62, 12);
+    ctx.fill();
+
+    // Pulsing Live Dot
+    const dotAlpha = 0.55 + 0.45 * Math.sin(currentTime * 6);
+    ctx.fillStyle = `rgba(255, 255, 255, ${dotAlpha})`;
+    ctx.beginPath();
+    ctx.arc(76, 65, 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 27px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('REPORTER HASAN', 98, 75);
+
+    // Right Location Pill
+    ctx.fillStyle = '#1e293b';
+    roundRect(630, 36, 406, 58, 12);
+    ctx.fill();
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ডামুড্যা, শরীয়তপুর • বিশেষ প্রতিবেদন', 833, 73);
+
+    // 2. Scene Headline Card (Upper Third)
+    const sceneLocal = currentTime - currentScene.start;
+    const headP = easeOutCubic(clamp(sceneLocal / 0.65, 0, 1));
+
+    ctx.save();
+    ctx.translate(0, (1 - headP) * -28);
+    ctx.globalAlpha = headP;
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+    roundRect(44, 154, W - 88, 138, 20);
+    ctx.fill();
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Left Accent Bar
+    ctx.fillStyle = '#f59e0b';
+    roundRect(44, 154, 14, 138, 7);
+    ctx.fill();
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 34px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(currentScene.headline, 82, 212);
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '25px sans-serif';
+    ctx.fillText(currentScene.sub, 82, 260);
+    ctx.restore();
+
+    // 3. Bottom Synchronized Voiceover Caption Card (Lower Third)
+    ctx.fillStyle = 'rgba(6, 10, 20, 0.95)';
+    roundRect(44, H - 355, W - 88, 255, 24);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Scene Indicator Pill
+    ctx.fillStyle = '#0284c7';
+    roundRect(74, H - 332, 165, 38, 10);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`দৃশ্য ০${currentScene.id + 1} / ০${SCENES.length}`, 156, H - 306);
+
+    // Timecode Indicator
+    const mins = Math.floor(currentTime / 60);
+    const secs = Math.floor(currentTime % 60).toString().padStart(2, '0');
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 22px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${mins}:${secs} / 1:12`, W - 78, H - 305);
+
+    // Caption Text
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 31px sans-serif';
+    drawWrappedText(currentScene.caption, W / 2, H - 245, W - 150, 46, 'center');
+
+    // 4. Bottom Story Progress Bar (72s Timeline)
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, H - 18, W, 18);
+
+    const totalProgress = clamp(currentTime / TOTAL_DURATION, 0, 1);
+    const progGrad = ctx.createLinearGradient(0, 0, W, 0);
+    progGrad.addColorStop(0, '#ef4444');
+    progGrad.addColorStop(0.5, '#f59e0b');
+    progGrad.addColorStop(1, '#10b981');
+    ctx.fillStyle = progGrad;
+    ctx.fillRect(0, H - 18, W * totalProgress, 18);
+
+    // Scene Tick Markers
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    SCENES.forEach(s => {
+      if (s.start > 0) {
+        const tx = (s.start / TOTAL_DURATION) * W;
+        ctx.fillRect(tx - 1.5, H - 18, 3, 18);
+      }
+    });
+  }
+
+  // =========================================================================
+  // MAIN ANIMATION LOOP (30+ FPS Target, Self-Contained 72.0s Playback)
+  // =========================================================================
+  let startTime = null;
+
+  function renderFrame(timestamp) {
+    if (!startTime) startTime = timestamp;
+    const elapsed = (timestamp - startTime) / 1000;
+    const currentTime = Math.min(elapsed, TOTAL_DURATION);
+
+    // Find active scene
+    let activeScene = SCENES[SCENES.length - 1];
+    for (let i = 0; i < SCENES.length; i++) {
+      if (currentTime >= SCENES[i].start && currentTime < SCENES[i].end) {
+        activeScene = SCENES[i];
+        break;
+      }
+    }
+
+    const sceneDuration = activeScene.end - activeScene.start;
+    const localTime = Math.max(0, currentTime - activeScene.start);
+    const sceneProgress = clamp(localTime / sceneDuration, 0, 1);
+
+    // Smooth Scene Transition (Cross-dissolve / Subtle Scale)
+    const fadeIn = clamp(localTime / 0.45, 0, 1);
+    const fadeOut = currentTime < TOTAL_DURATION - 0.5
+      ? clamp((activeScene.end - currentTime) / 0.35, 0, 1)
+      : 1;
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(fadeIn, fadeOut);
+
+    switch (activeScene.id) {
+      case 0: renderScene0(sceneProgress, localTime); break;
+      case 1: renderScene1(sceneProgress, localTime); break;
+      case 2: renderScene2(sceneProgress, localTime); break;
+      case 3: renderScene3(sceneProgress, localTime); break;
+      case 4: renderScene4(sceneProgress, localTime); break;
+      case 5: renderScene5(sceneProgress, localTime); break;
+      case 6: renderScene6(sceneProgress, localTime); break;
+    }
+    ctx.restore();
+
+    // Render Persistent Documentary Chrome & Subtitles
+    renderNewsChrome(currentTime, activeScene);
+
+    if (elapsed < TOTAL_DURATION) {
+      requestAnimationFrame(renderFrame);
+    }
+  }
+
+  // Tap/Click anywhere to restart playback cleanly if needed
+  canvas.addEventListener('click', () => {
+    startTime = performance.now();
+    requestAnimationFrame(renderFrame);
+  });
+
+  requestAnimationFrame(renderFrame);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "FrameCraft",
+  "description": "HTML motion graphics video preview, timeline editor, media overlay studio, and multi-resolution MP4 exporter",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

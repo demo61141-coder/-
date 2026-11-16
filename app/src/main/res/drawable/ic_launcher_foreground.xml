@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer cinema frame within 66dp safe zone (27..81) -->
+    <path
+        android:fillColor="#1E293B"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="3.5"
+        android:pathData="M31,29 L77,29 Q81,29 81,33 L81,67 Q81,71 77,71 L31,71 Q27,71 27,67 L27,33 Q27,29 31,29 Z" />
+
+    <!-- Bold Play Triangle in bright cyan -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M47,41 L66,50 L47,59 Z" />
+
+    <!-- Timeline Track Pill at bottom -->
+    <path
+        android:fillColor="#334155"
+        android:pathData="M29,76 L79,76 Q81,76 81,78 L81,80 Q81,82 79,82 L29,82 Q27,82 27,80 L27,78 Q27,76 29,76 Z" />
+
+    <!-- Active Amber Timeline Segment & Playhead Needle -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M29,76 L58,76 L58,82 L29,82 Q27,82 27,80 L27,78 Q27,76 29,76 Z" />
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M56,72 L60,72 L60,85 L56,85 Z" />
+</vector>
